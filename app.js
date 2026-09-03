@@ -38,9 +38,19 @@ function buildForm() {
         wrapper.classList.add("field-checkbox");
         break;
       case "text":
-        input = document.createElement("textarea");
-        input.id = field.key;
-        input.rows = 2;
+        if (field.remember) {
+          // Single-line box for short remembered values like a name.
+          input = document.createElement("input");
+          input.type = "text";
+          input.id = field.key;
+          input.autocomplete = "off";
+          input.value = getRemembered(field.key);
+          input.addEventListener("input", () => setRemembered(field.key, input.value));
+        } else {
+          input = document.createElement("textarea");
+          input.id = field.key;
+          input.rows = 2;
+        }
         break;
       default: // number
         input = document.createElement("input");
@@ -86,6 +96,27 @@ function buildCounter(field) {
   box.appendChild(value);
   box.appendChild(plus);
   return box;
+}
+
+// --- Remembered values (e.g. scouter name) -------------------------------
+// Stored in localStorage so they survive reloads and are pre-filled on every
+// new match. Only fields with `remember: true` in config.js use this.
+const REMEMBER_PREFIX = "ftc-scout-remember:";
+
+function getRemembered(key) {
+  try {
+    return localStorage.getItem(REMEMBER_PREFIX + key) || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+function setRemembered(key, value) {
+  try {
+    localStorage.setItem(REMEMBER_PREFIX + key, value.trim());
+  } catch (e) {
+    /* storage unavailable (private mode) - just don't remember */
+  }
 }
 
 // Read all form values into a plain object keyed by field key.

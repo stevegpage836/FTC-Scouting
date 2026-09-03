@@ -1,0 +1,165 @@
+From b47d1bdef384108a5831d9432434c1671d2399be Mon Sep 17 00:00:00 2001
+From: FTC Scouting Team <team@example.com>
+Date: Thu, 3 Sep 2026 20:51:07 +0000
+Subject: [PATCH] Add remembered scouterName field; bump cache to v2
+
+---
+ BUILD_PLAN.md     |  8 +++++---
+ Code.gs           |  4 ++--
+ app.js            | 37 ++++++++++++++++++++++++++++++++++---
+ config.js         |  6 ++++++
+ service-worker.js |  2 +-
+ 5 files changed, 48 insertions(+), 9 deletions(-)
+
+diff --git a/BUILD_PLAN.md b/BUILD_PLAN.md
+index 84ccf2b..5f4c250 100755
+--- a/BUILD_PLAN.md
++++ b/BUILD_PLAN.md
+@@ -76,6 +76,7 @@ The skeleton ships with a starter model in `config.js`. Field types supported:
+ 
+ | key | label | type |
+ |-----|-------|------|
++| scouterName | Your name (scouter) | text (remembered) |
+ | matchNumber | Match # | number |
+ | teamNumber | Team # scouted | number |
+ | alliance | Alliance | select (Red/Blue) |
+@@ -94,7 +95,8 @@ The skeleton ships with a starter model in `config.js`. Field types supported:
+ > list automatically — add or remove a field and the UI follows.
+ 
+ **Two things to decide now so they don't bite you later:**
+-- *Who* is scouting (add a `scouterName` field) so rows are traceable.
++- *Who* is scouting — the `scouterName` field is included and remembered on the
++  device (`remember: true`), so each scouter types it once per event.
+ - *Which match/team* each record is for — already covered by `matchNumber` and
+   `teamNumber`.
+ 
+@@ -108,7 +110,7 @@ This is the "server", but you never manage a server — Google runs it.
+ 2. In **row 1**, add these headers **in this exact order**:
+ 
+    ```
+-   id  createdAt  matchNumber  teamNumber  alliance  autoSamples  autoPark
++   id  createdAt  scouterName  matchNumber  teamNumber  alliance  autoSamples  autoPark
+    teleopSamples  teleopSpecimens  endgameLevel  penalties  brokeDown
+    driverSkill  notes
+    ```
+@@ -191,7 +193,7 @@ With the pipeline proven, build out features in roughly this order:
+ 2. **Pit scouting** — add a second form + a `Pit` tab in the Sheet and a second
+    `COLUMNS` list / handler in `Code.gs`. (Tip: add a `type` field to records
+    and route to the right tab in `doPost`.)
+-3. **Scouter identity** — add a `scouterName` field, remembered between matches.
++3. **Scouter identity** — done: `scouterName` is remembered between matches.
+ 4. **Match schedule import** — FTC publishes event match schedules via the
+    official FIRST API; pre-loading the schedule lets scouters pick a match
+    instead of typing it. This is a phase-two enhancement, not a first step.
+diff --git a/Code.gs b/Code.gs
+index 57e1c2a..0c8c647 100755
+--- a/Code.gs
++++ b/Code.gs
+@@ -8,7 +8,7 @@
+ // SETUP CHECKLIST:
+ //   1. Create a Google Sheet with a tab named exactly "Matches".
+ //   2. In row 1 of "Matches", add these column headers, IN THIS ORDER:
+-//        id | createdAt | matchNumber | teamNumber | alliance |
++//        id | createdAt | scouterName | matchNumber | teamNumber | alliance |
+ //        autoSamples | autoPark | teleopSamples | teleopSpecimens |
+ //        endgameLevel | penalties | brokeDown | driverSkill | notes
+ //      (these must match the `key` values in the app's config.js,
+@@ -26,7 +26,7 @@ const SHEET_NAME = "Matches";
+ 
+ // The column order written to the sheet. Must match your header row.
+ const COLUMNS = [
+-  "id", "createdAt", "matchNumber", "teamNumber", "alliance",
++  "id", "createdAt", "scouterName", "matchNumber", "teamNumber", "alliance",
+   "autoSamples", "autoPark", "teleopSamples", "teleopSpecimens",
+   "endgameLevel", "penalties", "brokeDown", "driverSkill", "notes"
+ ];
+diff --git a/app.js b/app.js
+index 2fd3869..9cbb043 100755
+--- a/app.js
++++ b/app.js
+@@ -38,9 +38,19 @@ function buildForm() {
+         wrapper.classList.add("field-checkbox");
+         break;
+       case "text":
+-        input = document.createElement("textarea");
+-        input.id = field.key;
+-        input.rows = 2;
++        if (field.remember) {
++          // Single-line box for short remembered values like a name.
++          input = document.createElement("input");
++          input.type = "text";
++          input.id = field.key;
++          input.autocomplete = "off";
++          input.value = getRemembered(field.key);
++          input.addEventListener("input", () => setRemembered(field.key, input.value));
++        } else {
++          input = document.createElement("textarea");
++          input.id = field.key;
++          input.rows = 2;
++        }
+         break;
+       default: // number
+         input = document.createElement("input");
+@@ -88,6 +98,27 @@ function buildCounter(field) {
+   return box;
+ }
+ 
++// --- Remembered values (e.g. scouter name) -------------------------------
++// Stored in localStorage so they survive reloads and are pre-filled on every
++// new match. Only fields with `remember: true` in config.js use this.
++const REMEMBER_PREFIX = "ftc-scout-remember:";
++
++function getRemembered(key) {
++  try {
++    return localStorage.getItem(REMEMBER_PREFIX + key) || "";
++  } catch (e) {
++    return "";
++  }
++}
++
++function setRemembered(key, value) {
++  try {
++    localStorage.setItem(REMEMBER_PREFIX + key, value.trim());
++  } catch (e) {
++    /* storage unavailable (private mode) - just don't remember */
++  }
++}
++
+ // Read all form values into a plain object keyed by field key.
+ function readForm() {
+   const data = {};
+diff --git a/config.js b/config.js
+index 1cd074b..cc5993c 100755
+--- a/config.js
++++ b/config.js
+@@ -21,8 +21,14 @@ const SHARED_SECRET = "change-this-to-a-random-string";
+ // To add/remove a field: edit this array. The form and storage follow along.
+ //
+ // type can be:  "number" | "text" | "counter" | "select" | "checkbox"
++//
++// Optional flags:
++//   remember: true  -> the value is kept on the device and pre-filled on the
++//                      next match (used for the scouter's name so they only
++//                      type it once per event).
+ // ----------------------------------------------------------------------------
+ const MATCH_FIELDS = [
++  { key: "scouterName",  label: "Your name (scouter)", type: "text", remember: true },
+   { key: "matchNumber",  label: "Match #",            type: "number" },
+   { key: "teamNumber",   label: "Team # scouted",     type: "number" },
+   { key: "alliance",     label: "Alliance",           type: "select",  options: ["Red", "Blue"] },
+diff --git a/service-worker.js b/service-worker.js
+index a2d404e..f46e6b1 100755
+--- a/service-worker.js
++++ b/service-worker.js
+@@ -11,7 +11,7 @@
+ // URL — syncing must always go to the live network.
+ // ============================================================================
+ 
+-const CACHE_VERSION = "ftc-scout-v1";   // <-- bump this (v2, v3...) on every release
++const CACHE_VERSION = "ftc-scout-v2";   // <-- bump this (v2, v3...) on every release
+ const APP_SHELL = [
+   "./",
+   "./index.html",
+-- 
+2.43.0
+

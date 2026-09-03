@@ -8,7 +8,7 @@
 // SETUP CHECKLIST:
 //   1. Create a Google Sheet with a tab named exactly "Matches".
 //   2. In row 1 of "Matches", add these column headers, IN THIS ORDER:
-//        id | createdAt | matchNumber | teamNumber | alliance |
+//        id | createdAt | scouterName | matchNumber | teamNumber | alliance |
 //        autoSamples | autoPark | teleopSamples | teleopSpecimens |
 //        endgameLevel | penalties | brokeDown | driverSkill | notes
 //      (these must match the `key` values in the app's config.js,
@@ -26,7 +26,7 @@ const SHEET_NAME = "Matches";
 
 // The column order written to the sheet. Must match your header row.
 const COLUMNS = [
-  "id", "createdAt", "matchNumber", "teamNumber", "alliance",
+  "id", "createdAt", "scouterName", "matchNumber", "teamNumber", "alliance",
   "autoSamples", "autoPark", "teleopSamples", "teleopSpecimens",
   "endgameLevel", "penalties", "brokeDown", "driverSkill", "notes"
 ];

@@ -76,6 +76,7 @@ The skeleton ships with a starter model in `config.js`. Field types supported:
 
 | key | label | type |
 |-----|-------|------|
+| scouterName | Your name (scouter) | text (remembered) |
 | matchNumber | Match # | number |
 | teamNumber | Team # scouted | number |
 | alliance | Alliance | select (Red/Blue) |
@@ -94,7 +95,8 @@ The skeleton ships with a starter model in `config.js`. Field types supported:
 > list automatically — add or remove a field and the UI follows.
 
 **Two things to decide now so they don't bite you later:**
-- *Who* is scouting (add a `scouterName` field) so rows are traceable.
+- *Who* is scouting — the `scouterName` field is included and remembered on the
+  device (`remember: true`), so each scouter types it once per event.
 - *Which match/team* each record is for — already covered by `matchNumber` and
   `teamNumber`.
 
@@ -108,7 +110,7 @@ This is the "server", but you never manage a server — Google runs it.
 2. In **row 1**, add these headers **in this exact order**:
 
    ```
-   id  createdAt  matchNumber  teamNumber  alliance  autoSamples  autoPark
+   id  createdAt  scouterName  matchNumber  teamNumber  alliance  autoSamples  autoPark
    teleopSamples  teleopSpecimens  endgameLevel  penalties  brokeDown
    driverSkill  notes
    ```
@@ -191,7 +193,7 @@ With the pipeline proven, build out features in roughly this order:
 2. **Pit scouting** — add a second form + a `Pit` tab in the Sheet and a second
    `COLUMNS` list / handler in `Code.gs`. (Tip: add a `type` field to records
    and route to the right tab in `doPost`.)
-3. **Scouter identity** — add a `scouterName` field, remembered between matches.
+3. **Scouter identity** — done: `scouterName` is remembered between matches.
 4. **Match schedule import** — FTC publishes event match schedules via the
    official FIRST API; pre-loading the schedule lets scouters pick a match
    instead of typing it. This is a phase-two enhancement, not a first step.

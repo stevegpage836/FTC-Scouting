@@ -21,8 +21,14 @@ const SHARED_SECRET = "change-this-to-a-random-string";
 // To add/remove a field: edit this array. The form and storage follow along.
 //
 // type can be:  "number" | "text" | "counter" | "select" | "checkbox"
+//
+// Optional flags:
+//   remember: true  -> the value is kept on the device and pre-filled on the
+//                      next match (used for the scouter's name so they only
+//                      type it once per event).
 // ----------------------------------------------------------------------------
 const MATCH_FIELDS = [
+  { key: "scouterName",  label: "Your name (scouter)", type: "text", remember: true },
   { key: "matchNumber",  label: "Match #",            type: "number" },
   { key: "teamNumber",   label: "Team # scouted",     type: "number" },
   { key: "alliance",     label: "Alliance",           type: "select",  options: ["Red", "Blue"] },

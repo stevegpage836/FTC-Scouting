@@ -11,7 +11,7 @@
 // URL — syncing must always go to the live network.
 // ============================================================================
 
-const CACHE_VERSION = "ftc-scout-v1";   // <-- bump this (v2, v3...) on every release
+const CACHE_VERSION = "ftc-scout-v2";   // <-- bump this (v2, v3...) on every release
 const APP_SHELL = [
   "./",
   "./index.html",
